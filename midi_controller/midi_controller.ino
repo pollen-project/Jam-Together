@@ -50,8 +50,11 @@ byte midiCh = 1; //* MIDI channel to be used
 byte note = 36; //* Lowest note to be used; 36 = C2; 60 = Middle C
 byte cc = 1; //* Lowest MIDI CC to be used
 
+//Button Status
+int buttonStatus[NButtons] = {0};
 
-Adafruit_NeoPixel pixels(73, 18, NEO_GRB + NEO_KHZ800);
+const int numPixels = 88; // Total number of NeoPixels
+Adafruit_NeoPixel pixels = Adafruit_NeoPixel(numPixels, 18, NEO_GRB + NEO_KHZ800);
 
 // SETUP
 void setup() {
@@ -88,7 +91,14 @@ void loop() {
 
   buttons();
   //potentiometers();
-
+  Serial.print("Button status: ");
+    for (int i = 0; i < NButtons; i++) {
+        Serial.print(buttonStatus[i]);
+        if (i < NButtons - 1) {
+            Serial.print(", ");
+        }
+    }
+    Serial.println();
 }
 
 ////
@@ -120,7 +130,9 @@ void buttons() {
 
           // use if using with ATmega32U4 (micro, pro micro, leonardo...)
           noteOn(midiCh, note + i, 0);  // channel, note, velocity
+          buttonStatus[i] = !buttonStatus[i];
           MidiUSB.flush();
+          updateNeoPixels();
 
         }
         buttonPState[i] = buttonCState[i];
@@ -128,6 +140,28 @@ void buttons() {
     }
   }
 }
+void updateNeoPixels() {
+    // Define the regions
+    int regions[] = {8, 7, 7, 7, 7, 8,7, 8, 7, 7, 8, 7}; // Array to hold the size of each region
+    int buttonMap[] = {10, 12, 11, 8, 7, 9, 1, 4, 5, 6, 3, 2};
+    int numRegions = sizeof(regions) / sizeof(regions[0]);
+    int currentPixel = 0;
+
+    for (int i = 0; i < numRegions; i++) {
+        int buttonIndex = buttonMap[i] - 1; // Get the correct button index
+        uint32_t color = buttonStatus[buttonIndex] ? pixels.Color(0, 150, 0) : pixels.Color(150, 0, 0); // Green if on, Red if off
+
+        for (int j = 0; j < regions[i]; j++) {
+            int pixelIndex = currentPixel + j;
+            pixels.setPixelColor(pixelIndex, color);
+        }
+
+        currentPixel += regions[i];
+    }
+
+    pixels.show();
+}
+
 
 ////
 // POTENTIOMETERS
