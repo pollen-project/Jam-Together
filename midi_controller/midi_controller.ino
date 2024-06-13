@@ -14,7 +14,7 @@
 
 #include "MIDIUSB.h"
 #include <Adafruit_NeoPixel.h>
-
+#include "screensaver.h"
 // BUTTONS
 const int NButtons = 12; //***  total number of buttons
 const int buttonPin[NButtons] = {2, 3, 4, 5, 6, 7, 8, 9, 10, 16, 14, 15}; //*** define Digital Pins connected from Buttons to Arduino; (ie {10, 16, 14, 15, 6, 7, 8, 9, 2, 3, 4, 5}; 12 buttons)
@@ -53,6 +53,8 @@ byte cc = 1; //* Lowest MIDI CC to be used
 //Button Status
 int buttonStatus[NButtons] = {0};
 
+unsigned long lastButtonPressTime = 0; // Variable to store the time of the last button press
+
 const int numPixels = 88; // Total number of NeoPixels
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(numPixels, 18, NEO_GRB + NEO_KHZ800);
 
@@ -61,7 +63,7 @@ void setup() {
 
   // Baud Rate
   // 31250 for MIDI class compliant | 115200 for Hairless MIDI
-
+  //Serial.begin(115200);
   // Buttons
   // Initialize buttons with pull up resistors
   for (int i = 0; i < NButtons; i++) {
@@ -70,19 +72,11 @@ void setup() {
 
   pixels.begin();
   pixels.clear();
-  for(int i=0; i<19; i++) {
+  for(int i=0; i<numPixels; i++) {
     pixels.setPixelColor(i, pixels.Color(128, 128, 128));
   }
-  for(int i=0; i<19; i++) {
-    pixels.setPixelColor(i+19, pixels.Color(0, 0, 150));
-  }
-  for(int i=0; i<19; i++) {
-    pixels.setPixelColor(i+37, pixels.Color(0, 150, 0));
-  }
-  for(int i=0; i<19; i++) {
-    pixels.setPixelColor(i+55, pixels.Color(150, 0, 0));
-  }
   pixels.show();
+  initScreensaver();
 }
 
 ////
@@ -91,7 +85,8 @@ void loop() {
 
   buttons();
   //potentiometers();
-  Serial.print("Button status: ");
+  // Serial.print("Button status: ");
+  
     for (int i = 0; i < NButtons; i++) {
         Serial.print(buttonStatus[i]);
         if (i < NButtons - 1) {
@@ -99,8 +94,29 @@ void loop() {
         }
     }
     Serial.println();
+  
+    // Calculate time since last button press
+    unsigned long timeSinceLastPress = millis() - lastButtonPressTime;
+    
+    if(timeSinceLastPress > 180000){
+      reset();
+       runScreensaver();
+    }
 }
+void reset() {
+    // Iterate through each button
+    for (int i = 0; i < NButtons; i++) {
+        // If the button is currently toggled on
+        if (buttonStatus[i] == 1){
+            // Send MIDI note Off message
+            noteOn(midiCh, note + i, 127); // Channel, note, velocity (0 for noteOff)
+            MidiUSB.flush(); // Flush MIDI buffer
 
+            // Toggle off the button status
+            buttonStatus[i] = 0;
+        }
+    }
+}
 ////
 // BUTTONS
 void buttons() {
@@ -133,6 +149,7 @@ void buttons() {
           buttonStatus[i] = !buttonStatus[i];
           MidiUSB.flush();
           updateNeoPixels();
+          lastButtonPressTime = millis();
 
         }
         buttonPState[i] = buttonCState[i];
@@ -149,7 +166,7 @@ void updateNeoPixels() {
 
     for (int i = 0; i < numRegions; i++) {
         int buttonIndex = buttonMap[i] - 1; // Get the correct button index
-        uint32_t color = buttonStatus[buttonIndex] ? pixels.Color(0, 150, 0) : pixels.Color(150, 0, 0); // Green if on, Red if off
+        uint32_t color = buttonStatus[buttonIndex] ? pixels.Color(0, 255, 0) : pixels.Color(0, 0, 150); // Green if on, Red if off
 
         for (int j = 0; j < regions[i]; j++) {
             int pixelIndex = currentPixel + j;
