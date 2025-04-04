@@ -1,5 +1,6 @@
 # Jam Together
 Jam Together is an interactive sound installation designed for Roskilde Festival. It allows festival attendees to explore their creativity and connect with others through playful sound exploration.
+![Alt Text](images/pollen.jpg)
 
 The installation features a control panel with various input types, including buttons and distance sensors, to encourage exploration and experimentation. These inputs will trigger different sound samples and filter effects through Ableton Live running on a computer housed in a waterproof box. The installation also uses synchronized lights that react to the music. The music and samples are made by the group, meaning no copyright infringements.
 
